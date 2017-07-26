@@ -8,22 +8,27 @@
 
 namespace eirikr {
     class Camera {
+    private: // read-only
+        glm::vec3 worldUp;
+        glm::vec3 cameraUp;
+        glm::vec3 cameraTarget;
+        glm::vec3 cameraPos;
+        glm::vec3 cameraFront;
+        glm::vec3 cameraDirection;
+        glm::vec3 cameraRight;
+        
+        glm::mat4 cameraView;
+        glm::mat4 cameraProjection;
+        
     private:
+        void refresh();
+        
+    public:
         float yaw;
         float pitch;
         float fov;
         float cameraSensitivity;
         float cameraSpeed;
-        
-        glm::vec3 cameraPos;
-        glm::vec3 cameraFront;
-        glm::vec3 cameraUp;
-        glm::vec3 worldUp;
-        glm::vec3 cameraTarget;
-        glm::vec3 cameraDirection; // readonly, from camera to target
-        glm::vec3 cameraRight;
-        glm::mat4 cameraView;
-        glm::mat4 cameraProjection;
         
     public:
         enum mouseDirections {
@@ -59,6 +64,10 @@ namespace eirikr {
         
         glm::mat4 updateCameraView();
         glm::mat4 updateCameraProjection(float WIDTH, float HEIGHT, float nearPlane, float farPlane);
+        glm::vec3 updateCameraPos(float x, float y, float z);
+        glm::vec3 updateCameraTarget(float x, float y, float z);
+        glm::vec3 updateCameraDirection(float x, float y, float z);
+        glm::vec3 updateWorldUp(float x, float y, float z);
         glm::vec3 updateCameraFront(double currentX, double currentY, double lastX, double lastY);
         float updateFov(float xOffset, float yOffset);
         
@@ -103,6 +112,12 @@ namespace eirikr {
     float Camera::getSensitivity() { return cameraSensitivity; }
     float Camera::getSpeed() { return cameraSpeed; }
     
+    void Camera::refresh() {
+        cameraDirection = glm::normalize(cameraPos - cameraTarget);
+        cameraRight = glm::normalize(glm::cross(worldUp, cameraDirection));
+        cameraView = glm::lookAt(cameraPos, cameraPos + cameraFront, worldUp);
+    }
+    
     glm::mat4 Camera::updateCameraView() {
         cameraView = glm::lookAt(cameraPos, cameraPos + cameraFront, worldUp);
         return cameraView;
@@ -111,6 +126,30 @@ namespace eirikr {
     glm::mat4 Camera::updateCameraProjection(float width, float height, float nearPlane, float farPlane) {
         cameraProjection = glm::perspective(glm::radians(fov), static_cast<float>(width / height), nearPlane, farPlane);
         return cameraProjection;
+    }
+    
+    glm::vec3 Camera::updateWorldUp(float x, float y, float z) {
+        worldUp = glm::vec3(x, y, z);
+        refresh();
+        return worldUp;
+    }
+    
+    glm::vec3 Camera::updateCameraPos(float x, float y, float z) {
+        cameraPos = glm::vec3(x, y, z);
+        refresh();
+        return cameraPos;
+    }
+    
+    glm::vec3 Camera::updateCameraTarget(float x, float y, float z) {
+        cameraTarget = glm::vec3(x, y, z);
+        refresh();
+        return cameraTarget;
+    }
+    
+    glm::vec3 Camera::updateCameraDirection(float x, float y, float z) {
+        cameraDirection = glm::vec3(x, y, z);
+        refresh();
+        return cameraDirection;
     }
     
     glm::vec3 Camera::updateCameraFront(double currentX, double currentY, double lastX, double lastY) {
@@ -123,6 +162,7 @@ namespace eirikr {
         cameraFront.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
         cameraFront.y = sin(glm::radians(pitch));
         cameraFront.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
+        refresh();
         return cameraFront;
     }
     
@@ -152,6 +192,7 @@ namespace eirikr {
         else if (direction == mouseDirections::RIGHT) {
             cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
         }
+        refresh();
     }
     
 }
